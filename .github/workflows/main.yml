@@ -1,0 +1,48 @@
+name: Stock Watcher (Telegram)
+
+on:
+  # 1) GitHub에서 수동 실행
+  workflow_dispatch:
+
+  # 2) 매일 한국시간 08:00 / 12:00 / 22:00 실행
+  #    GitHub Actions는 UTC 기준이라서 +9시간 보정해야 합니다.
+  #    - 23:00(전날) UTC  = 08:00 KST
+  #    - 03:00 UTC        = 12:00 KST
+  #    - 13:00 UTC        = 22:00 KST
+  schedule:
+    - cron: "0 23 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 13 * * *"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) 저장소 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Python 3.11 설치
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3) 패키지 설치 (루트의 requirements.txt 기준)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4) 클라우드에서 한 번 스캔 실행
+      #    cloud_scan_once.py 안에서 main/scanner를 import 해서
+      #    조건검색 + 텔레그램 알림을 보내는 구조라고 가정
+      - name: Run cloud scanner (single pass)
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          python cloud_scan_once.py
+          # 만약 파일이 app/ 폴더 안이라면 위 줄 대신:
+          # python app/cloud_scan_once.py
