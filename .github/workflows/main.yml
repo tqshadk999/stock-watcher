@@ -2,6 +2,8 @@ name: Stock Watcher (Telegram)
 
 on:
   schedule:
+    # GitHub Actions는 UTC 기준이므로
+    # 23시 → KST 08:00, 3시 → KST 12:00, 13시 → KST 22:00
     - cron: '0 23 * * *'   # KST 08:00
     - cron: '0 3 * * *'    # KST 12:00
     - cron: '0 13 * * *'   # KST 22:00
@@ -30,4 +32,4 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          python app/cloud_scan_once.py
+          python cloud_scan_once.py
