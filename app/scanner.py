@@ -1,44 +1,39 @@
 # app/scanner.py
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from app.notifier import send_message
 
 
 def scan_once() -> None:
     """
-    GitHub Actions(예약/수동 실행)에서 '1회 실행'되는 엔트리 포인트.
-    지금 단계 목표: "Actions가 실행되면 텔레그램이 무조건 1번 울린다"를 보장.
+    클라우드(GitHub Actions) / 로컬(PyCharm) 공용 1회 스캔 함수
 
-    ✅ 확인 후:
-    - 기존 스캐너 로직(티커 로딩/조건 판단/차트 생성/사진 전송)을
-      아래 TODO 영역에 붙여 넣으면 됩니다.
+    현재 목적:
+    - Actions가 실행되면 텔레그램으로 '무조건' 테스트 메시지 1회 전송
+    - 이후 여기에 실제 종목 스캔 로직을 추가
     """
-    # UTC와 KST 둘 다 표시 (Actions는 UTC 환경인 경우가 많음)
-    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    # KST는 UTC+9
-    now_kst = datetime.now(timezone.utc).astimezone(
-        timezone.utc.__class__(timezone.utc.utcoffset(None))  # dummy, avoid import
-    )
 
-    # 위 한 줄이 번거로워서 안전하게 KST 변환은 직접 계산
-    # (외부 라이브러리 없이 확실하게)
-    from datetime import timedelta
-    now_kst2 = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S KST")
+    # UTC / KST 시간 계산 (Actions는 UTC 환경)
+    now_utc = datetime.now(timezone.utc)
+    now_kst = now_utc + timedelta(hours=9)
 
+    # ===== 1️⃣ 무조건 보내는 테스트 메시지 =====
     send_message(
-        "✅ [Cloud] Stock Watcher 실행됨\n"
-        f"- {now_utc}\n"
-        f"- {now_kst2}\n"
-        "이 메시지가 오면: Secrets/봇/CHAT_ID/Actions 스케줄은 정상입니다."
+        "✅ [Stock Watcher] Cloud Scan 실행됨\n\n"
+        f"🕒 UTC  : {now_utc.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"🕘 KST  : {now_kst.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        "이 메시지가 오면 GitHub Actions + Telegram 연동은 정상입니다."
     )
 
-    # ------------------------------------------------------------
-    # TODO: 여기부터 당신의 '실제 스캔 로직'을 붙여 넣으세요.
+    # ===== 2️⃣ TODO: 실제 스캔 로직은 여기부터 추가 =====
+    # 예시 구조:
     #
-    # 예시(개념):
-    # - 티커 리스트 로드
-    # - 가격 데이터 다운로드
-    # - 조건 평가
-    # - 조건 만족 시 send_message / send_photo 호출
-    # ------------------------------------------------------------
+    # tickers = load_favorite_tickers()
+    # for ticker in tickers:
+    #     if check_conditions(ticker):
+    #         send_message(f"📉 {ticker} 조건 충족")
+    #
+    # send_photo(chart_bytes, caption="차트 이미지")
+    #
+    # =====================================================
