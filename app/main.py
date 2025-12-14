@@ -13,7 +13,7 @@ DATA_DIR = "data"
 FOUND_FILE = os.path.join(DATA_DIR, "found_today.json")
 SENT_FILE = os.path.join(DATA_DIR, "sent_today.json")
 
-TOP_N_PER_THEME = 10
+TOP10 = 10
 
 
 def _load_json(path: str, default: dict) -> dict:
@@ -32,27 +32,21 @@ def _save_json(path: str, data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _today_key() -> str:
+def _today() -> str:
     return date.today().isoformat()
 
 
-def _get_market_cap(symbol: str) -> int:
+def _mcap(sym: str) -> int:
     try:
-        info = yf.Ticker(symbol).info
-        return int(info.get("marketCap", 0) or 0)
+        info = yf.Ticker(sym).info
+        return int(info.get("marketCap") or 0)
     except Exception:
         return 0
 
 
-def send_theme_top10_report() -> None:
-    """
-    알림 시간(08/12/22 등) 실행:
-    - found_today.json에서 조건 충족 종목 로드
-    - sent_today.json에 기록된 종목은 제외 (하루 기준 중복 방지)
-    - 테마별로 시총순 Top10만 텔레그램 전송
-    - 전송된 종목은 sent_today.json에 저장
-    """
-    today = _today_key()
+def report_theme_top10() -> None:
+    today = _today()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     found = _load_json(FOUND_FILE, {"date": today, "items": []})
     if found.get("date") != today:
@@ -64,36 +58,24 @@ def send_theme_top10_report() -> None:
 
     sent_set = set(sent.get("sent_symbols", []))
 
-    # 아직 안 보낸 후보만
-    candidates = []
-    for it in found.get("items", []):
-        sym = it.get("symbol")
-        if not sym or sym in sent_set:
-            continue
-        candidates.append(it)
+    candidates = [it for it in found.get("items", []) if it.get("symbol") and it["symbol"] not in sent_set]
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    # ✅ 실행 확인/요약은 무조건 1번 보냄
+    # ✅ 요약 메시지는 무조건 1번
     if not candidates:
         send_message(
-            f"📊 *조건 스캔 요약*\n"
-            f"기준: {now}\n\n"
-            f"⚠️ 오늘(또는 현재까지) 조건 충족 종목이 없거나,\n"
-            f"이미 오늘 알림으로 모두 발송되었습니다.",
+            f"📊 *조건 스캔 요약*\n기준: {now}\n\n"
+            "⚠️ 조건 충족 종목이 없거나, 오늘 이미 전부 발송되었습니다.",
             parse_mode="Markdown",
         )
         return
 
-    # 테마별 그룹
-    by_theme: dict[str, list[dict]] = {}
+    # 테마별 분리
+    by_theme = {}
     for it in candidates:
-        theme = it.get("theme", "기타") or "기타"
-        by_theme.setdefault(theme, []).append(it)
+        by_theme.setdefault(it.get("theme", "기타"), []).append(it)
 
-    # 테마별 Top10(시총)
-    final_lines = [
-        "📊 *미국주식 테마별 조건 충족 Top 10*",
+    lines = [
+        "📊 *미국주식 테마별 조건 충족 Top10*",
         "조건: 볼린저 하단 반등 / (2일 하락 후 반등 포함)",
         f"기준시각: {now}",
         "",
@@ -101,57 +83,48 @@ def send_theme_top10_report() -> None:
 
     newly_sent = set()
 
-    for theme in sorted(by_theme.keys()):
-        items = by_theme[theme]
+    # 테마별 시총 Top10
+    for theme in ["반도체", "금/은/원자재", "AI", "배당주"]:
+        items = by_theme.get(theme, [])
+        if not items:
+            continue
 
         ranked = []
         for it in items:
             sym = it["symbol"]
-            mcap = _get_market_cap(sym)
-            ranked.append((mcap, it))
+            ranked.append((_mcap(sym), it))
 
         ranked.sort(key=lambda x: x[0], reverse=True)
-        top = ranked[:TOP_N_PER_THEME]
+        top = ranked[:TOP10]
 
         if not top:
             continue
 
-        final_lines.append("━━━━━━━━━━━━━━━━━━")
-        final_lines.append(f"{theme} :")
+        lines.append("━━━━━━━━━━━━━━━━━━")
+        lines.append(f"{theme} :")
         for mcap, it in top:
             sym = it["symbol"]
             name = it.get("name", "")
-            final_lines.append(f"[{sym}] {name}")
+            lines.append(f"[{sym}] {name}")
             newly_sent.add(sym)
 
-    # 전송
-    send_message("\n".join(final_lines), parse_mode="Markdown")
+    send_message("\n".join(lines), parse_mode="Markdown")
 
-    # sent 저장(하루 중복 방지)
+    # 하루 중복 방지 저장
     sent_set |= newly_sent
     sent["date"] = today
     sent["sent_symbols"] = sorted(sent_set)
     _save_json(SENT_FILE, sent)
 
 
-# =========================
-# 실행 진입점
-# =========================
 def run(mode: str) -> None:
-    """
-    mode:
-      - scan   : 장중 감시(누적 저장)
-      - report : 알림시간 리포트(테마별 Top10, 중복 제거)
-    """
     if mode == "scan":
         scan_and_store()
     elif mode == "report":
-        send_theme_top10_report()
+        report_theme_top10()
     else:
-        raise ValueError("mode는 scan 또는 report 이어야 합니다.")
+        raise ValueError("MODE는 scan 또는 report")
 
 
 if __name__ == "__main__":
-    # 기본은 report (원하면 환경변수 MODE로 변경)
-    mode = os.getenv("MODE", "report").strip().lower()
-    run(mode)
+    run(os.getenv("MODE", "report").strip().lower())
