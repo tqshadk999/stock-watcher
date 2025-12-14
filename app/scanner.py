@@ -1,109 +1,44 @@
-# scanner.py
+# app/scanner.py
+from __future__ import annotations
 
-import matplotlib.pyplot as plt
-from telegram import Bot
-from io import BytesIO
-
-from utils import (
-    get_sp500_tickers,
-    get_nasdaq100_tickers,
-    load_price,
-    add_indicators,
-    check_conditions,
-)
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ALERT_TIMES
-
-bot = Bot(token=TELEGRAM_TOKEN)
+from datetime import datetime, timezone
+from app.notifier import send_message
 
 
-# ───────────────────────────────────────────────────────────────
-# 텔레그램 발송 함수
-# ───────────────────────────────────────────────────────────────
-def send_chart(df, symbol, index_name, condition_text):
-    plt.figure(figsize=(12, 8))
+def scan_once() -> None:
+    """
+    GitHub Actions(예약/수동 실행)에서 '1회 실행'되는 엔트리 포인트.
+    지금 단계 목표: "Actions가 실행되면 텔레그램이 무조건 1번 울린다"를 보장.
 
-    # 가격 + 볼린저밴드
-    plt.plot(df["Close"], label="Close")
-    plt.plot(df["MA5"], label="MA5")
-    plt.plot(df["MA20"], label="MA20")
-    plt.plot(df["MA60"], label="MA60")
-    plt.plot(df["MA120"], label="MA120")
+    ✅ 확인 후:
+    - 기존 스캐너 로직(티커 로딩/조건 판단/차트 생성/사진 전송)을
+      아래 TODO 영역에 붙여 넣으면 됩니다.
+    """
+    # UTC와 KST 둘 다 표시 (Actions는 UTC 환경인 경우가 많음)
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    # KST는 UTC+9
+    now_kst = datetime.now(timezone.utc).astimezone(
+        timezone.utc.__class__(timezone.utc.utcoffset(None))  # dummy, avoid import
+    )
 
-    plt.plot(df["BB_UPPER"], label="Upper BB")
-    plt.plot(df["BB_LOWER"], label="Lower BB")
+    # 위 한 줄이 번거로워서 안전하게 KST 변환은 직접 계산
+    # (외부 라이브러리 없이 확실하게)
+    from datetime import timedelta
+    now_kst2 = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S KST")
 
-    # 신고가 돌파 영역
-    df["90D_HIGH"].plot(label="90D High", linestyle="--")
+    send_message(
+        "✅ [Cloud] Stock Watcher 실행됨\n"
+        f"- {now_utc}\n"
+        f"- {now_kst2}\n"
+        "이 메시지가 오면: Secrets/봇/CHAT_ID/Actions 스케줄은 정상입니다."
+    )
 
-    plt.title(f"{index_name} / {symbol} / {condition_text}")
-    plt.legend()
-
-    img = BytesIO()
-    plt.savefig(img, format="png", dpi=200)
-    img.seek(0)
-    plt.close()
-
-    bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=img)
-
-
-# ───────────────────────────────────────────────────────────────
-# 즉시 조건 스캔 → 텔레그램 발송
-# ───────────────────────────────────────────────────────────────
-def scan_now():
-    for index_name, loader in {
-        "S&P500": get_sp500_tickers,
-        "NASDAQ100": get_nasdaq100_tickers,
-    }.items():
-
-        tickers = loader()
-        for t in tickers:
-            df = load_price(t)
-            if df is None:
-                continue
-
-            df = add_indicators(df)
-            if len(df) < 120:
-                continue
-
-            if check_conditions(df):
-                last = df.iloc[-1]
-                cond_text = "조건 충족"
-
-                send_chart(df, t, index_name, cond_text)
-                bot.send_message(
-                    text=f"📌 {index_name} / {t}\n조건 충족: 볼린저 반등 / 신고가 / MFI / 거래량",
-                    chat_id=TELEGRAM_CHAT_ID,
-                )
-
-    print("조건 스캔 완료")
-
-
-# ───────────────────────────────────────────────────────────────
-# 예약 시간 추천 종목(시총순 Top10) 발송
-# ───────────────────────────────────────────────────────────────
-def send_top10():
-    for index_name, loader in {
-        "S&P500": get_sp500_tickers,
-        "NASDAQ100": get_nasdaq100_tickers,
-    }.items():
-        tickers = loader()
-        selected = []
-
-        for t in tickers:
-            df = load_price(t)
-            if df is None:
-                continue
-
-            df = add_indicators(df)
-            if len(df) < 120:
-                continue
-
-            if check_conditions(df):
-                selected.append((t, df["Close"].iloc[-1]))
-
-        selected = sorted(selected, key=lambda x: x[1], reverse=True)[:10]
-        msg = "🔥 " + index_name + " 추천 Top10\n" + "\n".join([x[0] for x in selected])
-
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=msg)
-
-
+    # ------------------------------------------------------------
+    # TODO: 여기부터 당신의 '실제 스캔 로직'을 붙여 넣으세요.
+    #
+    # 예시(개념):
+    # - 티커 리스트 로드
+    # - 가격 데이터 다운로드
+    # - 조건 평가
+    # - 조건 만족 시 send_message / send_photo 호출
+    # ------------------------------------------------------------
