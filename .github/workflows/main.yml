@@ -2,11 +2,13 @@ name: Stock Watcher (Telegram)
 
 on:
   schedule:
-    # GitHub Actions는 UTC 기준이므로
-    # 23시 → KST 08:00, 3시 → KST 12:00, 13시 → KST 22:00
-    - cron: '0 23 * * *'   # KST 08:00
-    - cron: '0 3 * * *'    # KST 12:00
-    - cron: '0 13 * * *'   # KST 22:00
+    # GitHub Actions cron은 UTC 기준
+    # KST 08:00 = UTC 23:00 (전날)
+    - cron: "0 23 * * *"
+    # KST 12:00 = UTC 03:00
+    - cron: "0 3 * * *"
+    # KST 22:00 = UTC 13:00
+    - cron: "0 13 * * *"
   workflow_dispatch:
 
 jobs:
@@ -18,16 +20,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run cloud scanner (single pass)
+      - name: Run cloud scan (single pass)
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
