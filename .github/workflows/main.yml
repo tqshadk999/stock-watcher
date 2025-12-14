@@ -2,25 +2,18 @@ name: Stock Watcher (Telegram)
 
 on:
   schedule:
-    # GitHub Actions cron은 UTC 기준
-    # KST 08:00 = UTC 23:00 (전날)
-    - cron: "0 23 * * *"
-    # KST 12:00 = UTC 03:00
-    - cron: "0 3 * * *"
-    # KST 22:00 = UTC 13:00
-    - cron: "0 13 * * *"
+    - cron: "0 23 * * *"  # KST 08:00
+    - cron: "0 3 * * *"   # KST 12:00
+    - cron: "0 13 * * *"  # KST 22:00
   workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
