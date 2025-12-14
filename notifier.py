@@ -1,33 +1,25 @@
-# notifier.py
+# app/notifier.py
+from __future__ import annotations
+
+import os
 import requests
-import logging
-
-logger = logging.getLogger(__name__)
 
 
-def send_message(token: str, chat_id: str, text: str, parse_mode: str = "Markdown") -> bool:
+def _get_env(name: str) -> str:
+    v = os.getenv(name, "").strip()
+    if not v:
+        raise RuntimeError(f"{name} 환경변수가 비어 있습니다.")
+    return v
+
+
+def send_message(token_env: str, chat_id_env: str, text: str, parse_mode: str | None = None):
+    token = _get_env(token_env)
+    chat_id = _get_env(chat_id_env)
+
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    try:
-        r = requests.post(
-            url,
-            data={"chat_id": chat_id, "text": text, "parse_mode": parse_mode},
-            timeout=10,
-        )
-        r.raise_for_status()
-        return True
-    except Exception as e:
-        logger.warning(f"telegram send_message failed: {e}")
-        return False
+    payload = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
 
-
-def send_photo(token: str, chat_id: str, image_bytes: bytes, caption: str = "", parse_mode: str = "Markdown") -> bool:
-    url = f"https://api.telegram.org/bot{token}/sendPhoto"
-    try:
-        files = {"photo": ("chart.png", image_bytes, "image/png")}
-        data = {"chat_id": chat_id, "caption": caption, "parse_mode": parse_mode}
-        r = requests.post(url, files=files, data=data, timeout=30)
-        r.raise_for_status()
-        return True
-    except Exception as e:
-        logger.warning(f"telegram send_photo failed: {e}")
-        return False
+    r = requests.post(url, data=payload, timeout=30)
+    r.raise_for_status()
