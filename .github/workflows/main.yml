@@ -2,9 +2,9 @@ name: Stock Watcher (Telegram)
 
 on:
   schedule:
-    - cron: "0 23 * * *"  # KST 08:00
-    - cron: "0 3 * * *"   # KST 12:00
-    - cron: "0 13 * * *"  # KST 22:00
+    - cron: "0 22 * * *"  # KST 07:00
+    - cron: "0 2 * * *"   # KST 11:00
+    - cron: "0 12 * * *"  # KST 21:00
   workflow_dispatch:
 
 jobs:
