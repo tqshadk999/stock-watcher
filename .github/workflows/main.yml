@@ -1,30 +1,38 @@
-name: Stock Watcher (Telegram)
-
+name: US Stock Intraday BB Scanner
 on:
   schedule:
-    - cron: "0 22 * * *"  # KST 07:00
-    - cron: "0 2 * * *"   # KST 11:00
-    - cron: "0 12 * * *"  # KST 21:00
+    # 한국시간 기준
+    # 07:00 KST → 22:00 UTC (전날)
+    # 11:00 KST → 02:00 UTC
+    # 21:00 KST → 12:00 UTC
+    - cron: '0 22 * * 1-5'
+    - cron: '0 2 * * 1-5'
+    - cron: '0 12 * * 1-5'
+
   workflow_dispatch:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install yfinance pandas numpy requests
 
-      - name: Run cloud scan (single pass)
+      - name: Run intraday scanner
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          python -m app.cloud_scan_once
+          python app/cloud_scan_once.py
+
