@@ -1,45 +1,45 @@
-from collections import defaultdict
+name: US Stock BB Intraday Scanner
 
-from app.universe import load_universe, attach_market_cap
-from app.scanner import intraday_bb_rebound, intraday_bb_touch
-from app.favorites import FAVORITES
-from app.state import should_alert, mark_alerted
-from app.formatter import format_sector_message, format_favorites
-from app.telegram import send_message
+on:
+  # ⏰ 자동 실행 (한국시간 기준)
+  # 07:00 KST → 22:00 UTC (전날)
+  # 11:00 KST → 02:00 UTC
+  # 21:00 KST → 12:00 UTC
+  schedule:
+    - cron: '0 22 * * 1-5'
+    - cron: '0 2 * * 1-5'
+    - cron: '0 12 * * 1-5'
 
-TOP_PER_SECTOR = 10
+  # ▶️ GitHub Actions에서 수동 실행
+  workflow_dispatch:
 
-def run():
-    symbols = load_universe()
-    df = attach_market_cap(symbols)  # symbol, sector, market_cap...
+jobs:
+  scan:
+    runs-on: ubuntu-latest
 
-    sector_hits = defaultdict(list)   # sector -> [(symbol, market_cap)]
-    favorite_hits = []
+    timeout-minutes: 20
 
-    for row in df.itertuples():
-        symbol = row.symbol
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-        if not should_alert(symbol):
-            continue
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-        # ⭐ 즐겨찾기: BB 하단 터치만
-        if symbol in FAVORITES:
-            if intraday_bb_touch(symbol):
-                favorite_hits.append(symbol)
-                mark_alerted(symbol)
-            continue
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-        # 📌 일반: BB 하단 터치 + 반등 + 거래량(스캐너 내부)
-        if intraday_bb_rebound(symbol):
-            sector_hits[row.sector].append((symbol, row.market_cap))
-            mark_alerted(symbol)
-
-    # ✅ 섹터별 "시총 내림차순" Top10 선정
-    for sector, items in sector_hits.items():
-        items.sort(key=lambda x: x[1] or 0, reverse=True)
-        top_symbols = [s for s, _ in items[:TOP_PER_SECTOR]]
-        send_message(format_sector_message(sector, top_symbols, top_n=TOP_PER_SECTOR))
-
-    fav_msg = format_favorites(favorite_hits)
-    if fav_msg:
-        send_message(fav_msg)
+      - name: Run stock scanner
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          PYTHONPATH: ${{ github.workspace }}
+          # 수동 실행이면 1, 스케줄이면 0
+          FORCE_NOTIFY: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: |
+          python app/cloud_scan_once.py
