@@ -1,13 +1,4 @@
-pandas==2.2.1
+yfinance
+pandas
 numpy
-yfinance==0.2.40
-matplotlib==3.8.2
 requests
-python-dotenv==1.0.1
-APScheduler==3.10.1
-pytz
-beautifulsoup4
-mplfinance==0.12.10b0
-
-
-
