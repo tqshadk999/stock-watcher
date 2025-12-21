@@ -7,6 +7,7 @@ from app.state import should_alert, mark_alerted
 from app.formatter import format_sector_message, format_favorites
 from app.telegram import send_message
 
+
 TOP_PER_SECTOR = 10
 
 def run():
