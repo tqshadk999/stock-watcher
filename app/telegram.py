@@ -1,24 +1,22 @@
 import os
 import requests
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def send_message(text: str):
-    if not TOKEN or not CHAT_ID:
-        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN or CHAT_ID not set")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    if not token or not chat_id:
+        print("⚠️ Telegram env not set, skip sending")
+        print(text)
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
+        "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }
 
-    resp = requests.post(url, json=payload, timeout=10)
-
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"❌ Telegram send failed: {resp.status_code} {resp.text}"
-        )
+    requests.post(url, data=payload, timeout=10)
