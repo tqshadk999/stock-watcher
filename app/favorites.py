@@ -15,7 +15,7 @@ HEALTHCARE = [
 ]
 
 FINANCIAL = [
-    "BRK.B"
+    "BRK-B"
 ]
 
 INDEX_ETF = [
