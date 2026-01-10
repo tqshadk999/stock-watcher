@@ -76,3 +76,20 @@ def cond_bb_rebound_with_fib(symbol: str) -> bool:
     close_now = df["Close"].iloc[-1]
 
     return close_now <= fib_618
+
+
+# =====================================================
+# ✅ 🔧 핵심 해결부 (이게 없어서 터졌던 것)
+# =====================================================
+
+def scan_symbol(symbol: str) -> dict:
+    """
+    main.py가 요구하는 인터페이스용 래퍼
+    기존 로직은 절대 변경하지 않음
+    """
+    return {
+        "symbol": symbol,
+        "bb_rebound": cond_bb_rebound(symbol),
+        "bb_rebound_volume": cond_bb_rebound_with_volume(symbol),
+        "bb_rebound_fib": cond_bb_rebound_with_fib(symbol),
+    }
