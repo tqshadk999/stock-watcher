@@ -1,6 +1,11 @@
-from app.sectors import FAVORITES
+# app/universe.py
+from app.favorites import FAVORITES
 
-def load_universe(include_favorites=False):
+BASE_UNIVERSE = [
+    "AAPL", "MSFT", "GOOGL"
+]
+
+def load_universe(include_favorites: bool = True):
     symbols = set(BASE_UNIVERSE)
 
     if include_favorites:
