@@ -13,8 +13,8 @@ def _load_intraday(symbol: str):
             symbol,
             period="7d",
             interval="5m",
-            progress=False,
             auto_adjust=True,
+            progress=False,
         )
         if df.empty or len(df) < BB_WINDOW + 2:
             return None
@@ -23,11 +23,10 @@ def _load_intraday(symbol: str):
         return None
 
 
-def _bollinger(df: pd.DataFrame):
+def _bollinger_lower(df: pd.DataFrame):
     ma = df["Close"].rolling(BB_WINDOW).mean()
     std = df["Close"].rolling(BB_WINDOW).std()
-    lower = ma - BB_STD * std
-    return lower
+    return ma - BB_STD * std
 
 
 # 1️⃣ 볼린저밴드 하단 터치 후 반등
@@ -36,7 +35,7 @@ def cond_bb_rebound(symbol: str) -> bool:
     if df is None:
         return False
 
-    lower = _bollinger(df)
+    lower = _bollinger_lower(df)
 
     prev_low = df["Low"].iloc[-2]
     prev_close = df["Close"].iloc[-2]
@@ -45,7 +44,7 @@ def cond_bb_rebound(symbol: str) -> bool:
     return prev_low <= lower.iloc[-2] and now_close > prev_close
 
 
-# 2️⃣ 볼린저밴드 하단 터치 + 반등 + 거래량 증가
+# 2️⃣ 반등 + 거래량 증가
 def cond_bb_rebound_with_volume(symbol: str) -> bool:
     df = _load_intraday(symbol)
     if df is None:
@@ -60,7 +59,7 @@ def cond_bb_rebound_with_volume(symbol: str) -> bool:
     return vol_now >= vol_avg * VOLUME_MULTIPLIER
 
 
-# 3️⃣ 볼린저밴드 하단 터치 + 반등 + 피보나치 되돌림
+# 3️⃣ 반등 + 피보나치 되돌림
 def cond_bb_rebound_with_fib(symbol: str) -> bool:
     df = _load_intraday(symbol)
     if df is None:
