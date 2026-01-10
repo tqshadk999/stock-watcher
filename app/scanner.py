@@ -1,6 +1,5 @@
 import yfinance as yf
 import pandas as pd
-import numpy as np
 
 BB_WINDOW = 20
 BB_STD = 2
@@ -36,12 +35,12 @@ def condition_1_bb_rebound(symbol):
     if df is None:
         return False
 
-    ma, lower = _bollinger(df)
+    _, lower = _bollinger(df)
 
-    low_prev = float(df["Low"].iloc[-2])
-    close_prev = float(df["Close"].iloc[-2])
-    close_now = float(df["Close"].iloc[-1])
-    lower_prev = float(lower.iloc[-2])
+    low_prev = df["Low"].iloc[-2].item()
+    close_prev = df["Close"].iloc[-2].item()
+    close_now = df["Close"].iloc[-1].item()
+    lower_prev = lower.iloc[-2].item()
 
     return low_prev <= lower_prev and close_now > close_prev
 
@@ -52,15 +51,15 @@ def condition_2_bb_rebound_volume(symbol):
     if df is None:
         return False
 
-    ma, lower = _bollinger(df)
+    _, lower = _bollinger(df)
 
-    low_prev = float(df["Low"].iloc[-2])
-    close_prev = float(df["Close"].iloc[-2])
-    close_now = float(df["Close"].iloc[-1])
-    lower_prev = float(lower.iloc[-2])
+    low_prev = df["Low"].iloc[-2].item()
+    close_prev = df["Close"].iloc[-2].item()
+    close_now = df["Close"].iloc[-1].item()
+    lower_prev = lower.iloc[-2].item()
 
-    vol_now = float(df["Volume"].iloc[-1])
-    vol_avg = float(df["Volume"].rolling(VOLUME_WINDOW).mean().iloc[-2])
+    vol_now = df["Volume"].iloc[-1].item()
+    vol_avg = df["Volume"].rolling(VOLUME_WINDOW).mean().iloc[-2].item()
 
     return (
         low_prev <= lower_prev
@@ -77,13 +76,13 @@ def condition_3_bb_fibonacci(symbol):
 
     recent = df.tail(50)
 
-    low = float(recent["Low"].min())
-    high = float(recent["High"].max())
+    low = recent["Low"].min().item()
+    high = recent["High"].max().item()
 
     fib_382 = high - (high - low) * 0.382
     fib_618 = high - (high - low) * 0.618
 
-    close_now = float(df["Close"].iloc[-1])
-    low_prev = float(df["Low"].iloc[-2])
+    close_now = df["Close"].iloc[-1].item()
+    low_prev = df["Low"].iloc[-2].item()
 
     return low_prev <= fib_618 and fib_618 <= close_now <= fib_382
