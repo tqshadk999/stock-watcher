@@ -1,16 +1,9 @@
-from app.favorites import SECTOR_GROUPS
+from app.sectors import FAVORITES
 
-def load_universe():
-    """
-    즐겨찾기 종목만으로 Universe 구성
-    """
-    universe = []
+def load_universe(include_favorites=False):
+    symbols = set(BASE_UNIVERSE)
 
-    for sector, symbols in SECTOR_GROUPS.items():
-        for symbol in symbols:
-            universe.append({
-                "symbol": symbol,
-                "sector": sector
-            })
+    if include_favorites:
+        symbols |= set(FAVORITES)
 
-    return universe
+    return sorted(symbols)
