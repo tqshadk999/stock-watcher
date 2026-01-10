@@ -1,55 +1,64 @@
-import yfinance as yf
-from app.scanner import scan_symbol
+from collections import defaultdict
+
+from app.universe import load_universe, attach_market_cap
+from app.scanner import (
+    cond_bb_rebound,
+    cond_bb_rebound_with_volume,
+    cond_bb_rebound_with_fib,
+)
+from app.favorites import FAVORITES
+from app.state import should_alert, mark_alerted
+from app.formatter import format_sector_block, format_favorites_block
 from app.telegram import send_message
-from app.universe import load_universe
 
-
-def format_message(symbol, sector, triggered):
-    label_map = {
-        1: "① 볼린저 하단 반등",
-        2: "② 반등 + 거래량 돌파",
-        3: "③ 반등 + 피보나치 구간",
-    }
-
-    labels = " + ".join(label_map[i] for i in sorted(triggered))
-
-    return (
-        f"📊 <b>{symbol}</b>\n"
-        f"🏷 섹터: {sector}\n"
-        f"🚨 조건 발생: {labels}"
-    )
+TOP_PER_SECTOR = 10
 
 
 def run():
-    universe = load_universe(include_favorites=True, sanitize=True)
+    symbols = load_universe(include_favorites=True)
+    df = attach_market_cap(symbols)
+
+    sector_hits = defaultdict(list)
+    favorite_hits = []
+
+    for row in df.itertuples():
+        symbol = row.symbol
+        sector = row.sector or "ETC"
+
+        if not should_alert(symbol):
+            continue
+
+        conds = []
+
+        if cond_bb_rebound(symbol):
+            conds.append("1")
+        if cond_bb_rebound_with_volume(symbol):
+            conds.append("2")
+        if cond_bb_rebound_with_fib(symbol):
+            conds.append("3")
+
+        if not conds:
+            continue
+
+        if symbol in FAVORITES:
+            favorite_hits.append((symbol, conds))
+        else:
+            sector_hits[sector].append(
+                (symbol, row.market_cap or 0, conds)
+            )
+
+        mark_alerted(symbol)
 
     messages = []
 
-    for symbol, info in universe.items():
-        try:
-            df = yf.download(
-                symbol,
-                period="6mo",
-                interval="1d",
-                progress=False,
-                auto_adjust=True,
-                threads=False,
-            )
+    for sector, items in sector_hits.items():
+        items.sort(key=lambda x: x[1], reverse=True)
+        messages.append(
+            format_sector_block(sector, items[:TOP_PER_SECTOR])
+        )
 
-            if df.empty:
-                continue
-
-            triggered = scan_symbol(df)
-
-            if triggered:
-                messages.append(
-                    format_message(symbol, info["sector"], triggered)
-                )
-
-        except Exception as e:
-            print(f"❌ {symbol} error: {e}")
+    if favorite_hits:
+        messages.append(format_favorites_block(favorite_hits))
 
     if messages:
         send_message("\n\n".join(messages))
-    else:
-        print("No signals today")
