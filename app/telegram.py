@@ -7,16 +7,13 @@ def send_message(text: str):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not token or not chat_id:
-        print("⚠️ Telegram env not set, skip sending")
-        print(text)
-        return
+        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN or CHAT_ID not set")
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": text,
-        "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }
 
-    requests.post(url, data=payload, timeout=10)
+    requests.post(url, json=payload, timeout=10)
