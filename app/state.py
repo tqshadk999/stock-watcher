@@ -1,7 +1,29 @@
-_alerted = set()
+import os
+import json
+from datetime import date
 
-def should_alert(symbol):
-    return symbol not in _alerted
+STATE_FILE = "alert_state.json"
 
-def mark_alerted(symbol):
-    _alerted.add(symbol)
+
+def _load():
+    if not os.path.exists(STATE_FILE):
+        return {}
+    with open(STATE_FILE, "r") as f:
+        return json.load(f)
+
+
+def _save(data):
+    with open(STATE_FILE, "w") as f:
+        json.dump(data, f)
+
+
+def should_alert(symbol: str) -> bool:
+    data = _load()
+    today = str(date.today())
+    return data.get(symbol) != today
+
+
+def mark_alerted(symbol: str):
+    data = _load()
+    data[symbol] = str(date.today())
+    _save(data)
