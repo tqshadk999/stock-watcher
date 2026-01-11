@@ -3,9 +3,9 @@ name: Stock Scanner
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 22 * * 1-5"
-    - cron: "0 2 * * 1-5"
-    - cron: "0 12 * * 1-5"
+    - cron: "0 22 * * 1-5"  # 07:00 KST
+    - cron: "0 2 * * 1-5"   # 11:00 KST
+    - cron: "0 12 * * 1-5"  # 21:00 KST
 
 jobs:
   scan:
