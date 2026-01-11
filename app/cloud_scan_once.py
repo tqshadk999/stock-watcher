@@ -1,9 +1,7 @@
-# app/cloud_scan_once.py
-from app.telegram import send_message
 from app.main import run
+from app.telegram import send_message
 
-# 🔍 Actions 환경 테스트
-send_message("✅ GitHub Actions Telegram 연결 테스트")
+if __name__ == "__main__":
+    send_message("🚀 주식 스캐너 실행 시작")
+    run()
 
-# 📈 스캐너 실행
-run()
