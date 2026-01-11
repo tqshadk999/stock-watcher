@@ -1,15 +1,19 @@
 name: Stock Scanner
 
 on:
-  workflow_dispatch:   # 수동 실행 시에도 알림
+  workflow_dispatch:
   schedule:
-    - cron: "0 22 * * 1-5"  # 07:00 KST
-    - cron: "0 2 * * 1-5"   # 11:00 KST
-    - cron: "0 12 * * 1-5"  # 21:00 KST
+    - cron: "0 22 * * 1-5"
+    - cron: "0 2 * * 1-5"
+    - cron: "0 12 * * 1-5"
 
 jobs:
   scan:
     runs-on: ubuntu-latest
+
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - name: Checkout repository
@@ -26,7 +30,3 @@ jobs:
 
       - name: Run stock scanner
         run: python -m app.cloud_scan_once
-
-env:
-  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
