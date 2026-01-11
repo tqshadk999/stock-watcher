@@ -1,3 +1,4 @@
+# app/telegram.py
 import os
 import requests
 
@@ -7,7 +8,11 @@ def send_message(text: str):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not token or not chat_id:
-        raise RuntimeError("❌ TELEGRAM_BOT_TOKEN or CHAT_ID not set")
+        raise RuntimeError(
+            f"❌ TELEGRAM ENV NOT SET\n"
+            f"BOT_TOKEN={token}\n"
+            f"CHAT_ID={chat_id}"
+        )
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
@@ -16,4 +21,5 @@ def send_message(text: str):
         "disable_web_page_preview": True,
     }
 
-    requests.post(url, json=payload, timeout=10)
+    r = requests.post(url, json=payload, timeout=10)
+    r.raise_for_status()
